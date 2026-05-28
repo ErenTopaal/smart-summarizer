@@ -2,7 +2,17 @@ import Stripe from "stripe";
 import prisma from "@/lib/db";
 import type { SubscriptionPlan } from "@/types";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+let _stripe: Stripe | null = null;
+export const stripe = new Proxy({} as Stripe, {
+  get(_, prop) {
+    if (!_stripe) {
+      const key = process.env.STRIPE_SECRET_KEY;
+      if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
+      _stripe = new Stripe(key);
+    }
+    return (_stripe as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
 
 export const PLAN_PRICES: Record<SubscriptionPlan, { monthly?: string; yearly?: string }> = {
   free: {},
